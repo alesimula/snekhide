@@ -125,5 +125,9 @@ venv.bak/
 .dmypy.json
 dmypy.json
 
+# Fleet configuration
+.fleet/**/*
+!.fleet/run.json
+
 # Pyre type checker
 .pyre/

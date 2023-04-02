@@ -1,0 +1,72 @@
+{
+    "name": "snekhide",
+    "configurations": [
+        {
+            "type": "python",
+            "name": "Release build (Standalone)",
+            "arguments": ["-m", "nuitka", "--onefile", "--mingw64", "--prefer-source-code", "--follow-imports", "--follow-stdlib",
+                "--output-dir=./build/", "snekhide"],
+            "environment": {
+                "PYTHONPATH": "$PYTHONPATH$;$PROJECT_DIR$"
+            }
+        },
+        {
+            "type": "python",
+            "name": "Install dependancies",
+            "arguments": ["-m", "pip", "install", "-r", "requirements.txt"],
+            "environment": {
+                "PYTHONPATH": "$PYTHONPATH$;$PROJECT_DIR$"
+            }
+        },
+        {
+            "type": "python",
+            "name": "[help]",
+            "arguments": ["snekhide", "--help"],
+            "environment": {
+                "PYTHONPATH": "$PYTHONPATH$;$PROJECT_DIR$"
+            }
+        },
+        {
+            "type": "python",
+            "name": "[help] write",
+            "arguments": ["snekhide", "write", "--help"],
+            "environment": {
+                "PYTHONPATH": "$PYTHONPATH$;$PROJECT_DIR$"
+            }
+        },
+        {
+            "type": "python",
+            "name": "[help] read",
+            "arguments": ["snekhide", "read", "--help"],
+            "environment": {
+                "PYTHONPATH": "$PYTHONPATH$;$PROJECT_DIR$"
+            }
+        },
+        {
+            "type": "python",
+            "name": "[command] write",
+            "arguments": ["snekhide", "--debug", "write", "-s", "6", "-o", ".\\test\\img\\out.png", ".\\test\\img\\image.png",
+                ".\\test\\data\\test_image_big.jpg"],
+            "environment": {
+                "PYTHONPATH": "$PYTHONPATH$;$PROJECT_DIR$"
+            }
+        },
+        {
+            "type": "python",
+            "name": "[command] read",
+            "arguments": ["snekhide", "--debug", "read", ".\\test\\img\\out.png"],
+            "environment": {
+                "PYTHONPATH": "$PYTHONPATH$;$PROJECT_DIR$"
+            }
+        },
+        {
+            "type": "python",
+            "name": "[test] round-test (R->W)",
+            "dependsOn": ["[command] write"],
+            "arguments": ["snekhide", "--debug", "read", ".\\test\\img\\out.png"],
+            "environment": {
+                "PYTHONPATH": "$PYTHONPATH$;$PROJECT_DIR$"
+            }
+        },
+    ]
+}
