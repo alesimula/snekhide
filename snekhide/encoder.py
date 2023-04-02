@@ -57,6 +57,12 @@ def embed(source: Path, data: bytes, noise: bool, target=None, extensions: list[
         console.abort("""The file extension for the data file is too long:
             change the extension or use the --disable-file-info option""")
 
+    im: Image = None
+    try:
+        im = Image.open(source)
+    except:
+        error_img_read()
+
     if compression_level > 0:
         if not is_plaintext or binary_plaintext:
             console.out("Compressing data...")
@@ -88,7 +94,6 @@ def embed(source: Path, data: bytes, noise: bool, target=None, extensions: list[
     data_len_b64 = base64.b64encode(data_len_xor).decode()
 
     len_data_pixels = (len_payload + len(salt_b64) + len(data_header_b64) + len(extension_b64) + len(data_len_b64)) * 2
-    im = Image.open(source)
     width, height = im.size
     len_img_pixels = width * height
     if len_data_pixels > len_img_pixels:
@@ -160,6 +165,11 @@ class Base64BitStream:
             yield (b64_val & 0b00000100) >> 2, (b64_val & 0b00000010) >> 1, b64_val & 0b00000001
 
 
+# Image read error
+def error_img_read() -> NoReturn:
+    console.abort("Error: The source file is not an image")
+
+
 # Unidentified file error
 def error_read_nodata() -> NoReturn:
     console.abort("Error: No hidden data contained in file")
@@ -175,7 +185,7 @@ def read(image: Path, write_stdout: bool = False, password: str = None) -> None:
     try:
         im = Image.open(image)
     except:
-        error_read_nodata()
+        error_img_read()
 
     width, height = im.size
     pix_colors = im.load()

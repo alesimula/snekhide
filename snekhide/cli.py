@@ -181,6 +181,8 @@ def write(
     if write_stdout and password is None and strength != 0:
         console.abort("""Writing to stdout requires the password to be passed with the -p option
                 or encryption to be disabled""")
+    if write_stdout and target is not None:
+        console.abort("Cannot specify a target file when writing to stdout")
     data: bytes = message.encode('utf-8') if (datafile is None) else datafile.read_bytes()
     is_plaintext = force_message or datafile is None
     binary_plaintext = force_message and datafile is not None
