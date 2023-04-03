@@ -5,7 +5,7 @@
             "type": "python",
             "name": "Release build (Standalone)",
             "arguments": ["-m", "nuitka", "--onefile", "--mingw64", "--prefer-source-code", "--follow-imports", "--follow-stdlib",
-                "--output-dir=./build/", "snekhide"],
+                "--nofollow-import-to=numpy", "--output-dir=./build/", "snekhide"],
             "environment": {
                 "PYTHONPATH": "$PYTHONPATH$;$PROJECT_DIR$"
             }
