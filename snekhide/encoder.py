@@ -50,9 +50,8 @@ def embed(source: Path, data: bytes, noise: bool, target=None, extensions: list[
     extension = extensions[-2] + extensions[-1] if len(extensions) > 1 and extensions[-1] == '.gz' else \
         extensions[-1] if len(extensions) > 0 else None
     extension_xor = None if (extension is None) else bytes((a ^ 12) ^ b for (a, b) in zip(extension.encode('utf-8'), salt[::-1]))
-    extension_b64 = '' if (extension is None) else base64.b64encode(extension_xor).decode().rstrip('=')
 
-    extension_length = len(extension_b64)  # 0 to 255
+    extension_length = 0 if (extension is None) else len(extension_xor)
     if extension_length > 255:
         console.abort("""The file extension for the data file is too long:
             change the extension or use the --disable-file-info option""")
@@ -77,6 +76,7 @@ def embed(source: Path, data: bytes, noise: bool, target=None, extensions: list[
             del compressed_data
         else:
             data = compressed_data
+    data = extension_xor + data
 
     nonce = secrets.token_bytes(12)  # GCM mode needs a 12 bytes nonce
     # Predicting size of the AES-GCM output encoded in Base64
@@ -93,7 +93,7 @@ def embed(source: Path, data: bytes, noise: bool, target=None, extensions: list[
     data_len_xor = bytes((a ^ 64) ^ b for (a, b) in zip(data_len_bytes, salt[::-1]))
     data_len_b64 = base64.b64encode(data_len_xor).decode()
 
-    len_data_pixels = (len_payload + len(salt_b64) + len(data_header_b64) + len(extension_b64) + len(data_len_b64)) * 2
+    len_data_pixels = (len_payload + len(salt_b64) + len(data_header_b64) + len(data_len_b64)) * 2
     width, height = im.size
     len_img_pixels = width * height
     if len_data_pixels > len_img_pixels:
@@ -113,7 +113,7 @@ def embed(source: Path, data: bytes, noise: bool, target=None, extensions: list[
 
     console.out("Writing data...")
     validate_predicted_size(len_payload, len(encrypted_b64))
-    data = '{}{}{}{}{}'.format(salt_b64, data_header_b64, extension_b64, data_len_b64, encrypted_b64)
+    data = '{}{}{}{}'.format(salt_b64, data_header_b64, data_len_b64, encrypted_b64)
     validate_predicted_size(len_data_pixels, len(data) * 2)
     pix_colors = im.load()
     bit_stream = Base64BitStream(data)
@@ -216,22 +216,15 @@ def read(image: Path, write_stdout: bool = False, password: str = None) -> None:
     if write_stdout and password is None and hash_strength != 0:
         console.abort("Writing to stdout requires the password to be passed with the -p option")
 
-    pos_data_len = 12 + extension_len
+    pos_data_len = 12
     pos_file_start = pos_data_len + 8
-    file_extension_xor = base64.b64decode((''.join(hidden_data[12:pos_data_len]) + '=' * (extension_len % 4))
-                                          .encode()) if has_extension else None
-    file_extension_bytes = bytes((a ^ 12) ^ b for (a, b) in zip(file_extension_xor, salt[::-1])) if has_extension else None
-    file_extension: str = ''
-    try:
-        file_extension = file_extension_bytes.decode('utf-8') if has_extension else ''
-    except:
-        error_read_nodata()
 
     data_len_xor = base64.b64decode(''.join(hidden_data[pos_data_len:pos_file_start]).encode())
     data_len_bytes = bytes((a ^ 64) ^ b for (a, b) in zip(data_len_xor, salt[::-1]))
     data_len = int.from_bytes(data_len_bytes, 'big', signed=False)
 
-    data_b64 = (''.join(hidden_data[pos_file_start:pos_file_start + data_len]) + '=' * (data_len % 4)).encode()
+    pos_file_end = pos_file_start + data_len
+    data_b64 = (''.join(hidden_data[pos_file_start:pos_file_end]) + '=' * (data_len % 4)).encode()
     data = base64.b64decode(data_b64)
 
     if write_stdout and password is None and hash_strength != 0:
@@ -250,9 +243,17 @@ def read(image: Path, write_stdout: bool = False, password: str = None) -> None:
     except:
         error_read_nodata() if hash_strength == 0 else error_read_fail()
 
+    file_extension_xor = decrypted[:extension_len] if has_extension else None
+    file_extension_bytes = bytes((a ^ 12) ^ b for (a, b) in zip(file_extension_xor, salt[::-1])) if has_extension else None
+    file_extension: str = ''
+    try:
+        file_extension = file_extension_bytes.decode('utf-8') if has_extension else ''
+    except:
+        error_read_nodata()
+
     console.out("Decompressing data...")
     if is_compressed:
-        decrypted = zstandard.decompress(decrypted)
+        decrypted = zstandard.decompress(decrypted[extension_len:])
 
     if is_plaintext or write_stdout:
         console.success("Hidden message successifully retrieved:")
