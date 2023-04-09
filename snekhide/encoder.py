@@ -223,8 +223,10 @@ def read(image: Path, write_stdout: bool = False, password: str = None) -> None:
     data_len_bytes = bytes((a ^ 64) ^ b for (a, b) in zip(data_len_xor, salt[::-1]))
     data_len = int.from_bytes(data_len_bytes, 'big', signed=False)
 
-    pos_file_end = pos_file_start + data_len
-    data_b64 = (''.join(hidden_data[pos_file_start:pos_file_end]) + '=' * (data_len % 4)).encode()
+    if (pos_file_start + data_len) > ((width * height) / 2).__ceil__():
+        error_read_nodata()
+
+    data_b64 = (''.join(hidden_data[pos_file_start:pos_file_start + data_len]) + '=' * (data_len % 4)).encode()
     data = base64.b64decode(data_b64)
 
     if write_stdout and password is None and hash_strength != 0:
@@ -252,8 +254,7 @@ def read(image: Path, write_stdout: bool = False, password: str = None) -> None:
         error_read_nodata()
 
     console.out("Decompressing data...")
-    if is_compressed:
-        decrypted = zstandard.decompress(decrypted[extension_len:])
+    decrypted = zstandard.decompress(decrypted[extension_len:]) if is_compressed else decrypted[extension_len:]
 
     if is_plaintext or write_stdout:
         console.success("Hidden message successifully retrieved:")
